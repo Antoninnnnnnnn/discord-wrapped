@@ -1,0 +1,12 @@
+# Personal Discord data and generated reports (never commit!)
+rapport/
+mockups/
+mesdonnéesdiscord/
+*.zip
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
