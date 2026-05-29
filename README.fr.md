@@ -88,3 +88,7 @@ requirements.txt   # (aucune dépendance externe)
 ## 📝 Licence
 
 [MIT](LICENSE)
+
+---
+
+> 🤖 **Soyons honnêtes :** ce projet a été fait par [@Antoninnnnnnnn](https://github.com/Antoninnnnnnnn) qui admet volontiers ne comprendre aucune ligne de ce code. Le vrai MVP ici c'est la programmation en duo avec une IA. Apparemment, pas besoin de savoir coder pour shipper du code. Bienvenue en 2026.

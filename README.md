@@ -86,3 +86,7 @@ requirements.txt   # (no third-party dependencies)
 ## 📝 License
 
 [MIT](LICENSE)
+
+---
+
+> 🤖 **Full disclosure:** This project was built by [@Antoninnnnnnnn](https://github.com/Antoninnnnnnnn) who freely admits he doesn't understand a single line of this code. The real MVP here is AI pair programming. Turns out you don't need to know how to code to ship code. Welcome to 2026.
