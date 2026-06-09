@@ -1,12 +1,14 @@
-# Personal Discord data and generated reports (never commit!)
-rapport/
-rapports/
-mesdonnéesdiscord/
-*.zip
+# Ignore everything by default.
+*
 
-# Python
-__pycache__/
-*.pyc
-*.pyo
-.venv/
-venv/
+# Allow the repository root to be scanned.
+!*/
+
+# Keep only the source, docs, and project metadata tracked.
+!.gitignore
+!LICENSE
+!README.fr.md
+!README.md
+!analyze.py
+!render.py
+!requirements.txt
