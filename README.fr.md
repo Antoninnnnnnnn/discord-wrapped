@@ -93,7 +93,6 @@ python render.py "./rapports/discord_2026-06-10_0024_mesdonneesdiscord"
 ```
 analyze.py         # Analyseur : export -> rapport/data.json + rapport.html
 render.py          # Génère le dashboard HTML depuis data.json
-favicons/          # Icônes utilisées par le dashboard
 requirements.txt   # (aucune dépendance externe)
 ```
 

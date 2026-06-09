@@ -91,7 +91,6 @@ python render.py "./rapports/discord_2026-06-10_0024_discord-data"
 ```
 analyze.py         # Streaming analyzer: export -> rapport/data.json + rapport.html
 render.py          # Builds the self-contained HTML dashboard from data.json
-favicons/          # Icon set used by the dashboard
 requirements.txt   # (no third-party dependencies)
 ```
 
