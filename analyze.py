@@ -18,6 +18,7 @@ import json
 import glob
 import argparse
 import collections
+import unicodedata
 from datetime import datetime, timezone
 
 # --------------------------------------------------------------------------- #
@@ -39,6 +40,7 @@ NOMS_EXPORT_PROBABLES = (
 # Valeurs par défaut ; réellement déterminées dans main() via argparse.
 PKG = None
 OUT_DIR = os.path.join(HERE, "rapport")
+REPORTS_DIR = os.path.join(HERE, "rapports")
 
 # Discord epoch (snowflake) pour datation des IDs si besoin
 DISCORD_EPOCH = 1420070400000
@@ -78,6 +80,98 @@ def find_default_pkg():
         except OSError:
             pass
     return None
+
+
+def clean_user_path(raw):
+    """Nettoie un chemin collé dans le terminal (guillemets, espaces, ~, vars)."""
+    if raw is None:
+        return ""
+    path = str(raw).strip()
+    if path.startswith("& "):
+        path = path[2:].strip()
+    if (len(path) >= 2 and path[0] == path[-1] and path[0] in ("'", '"')):
+        path = path[1:-1].strip()
+    path = os.path.expandvars(os.path.expanduser(path))
+    return path
+
+
+def explain_export_problem(path):
+    """Retourne un message clair quand le chemin fourni n'est pas exploitable."""
+    if not path:
+        return "Aucun chemin fourni."
+    if path.lower().endswith(".zip"):
+        return (
+            "Tu as fourni une archive .zip. Décompresse-la d'abord, puis choisis "
+            "le dossier obtenu."
+        )
+    if not os.path.exists(path):
+        return "Ce chemin n'existe pas."
+    if not os.path.isdir(path):
+        return "Ce chemin existe, mais ce n'est pas un dossier."
+    return (
+        "Ce dossier ne ressemble pas à un export Discord. Il doit contenir au "
+        "moins un dossier comme Messages, Compte/Account, Activité/Activity ou "
+        "Serveurs/Servers."
+    )
+
+
+def validate_export_path(path):
+    """Normalise et valide un dossier d'export Discord."""
+    cleaned = clean_user_path(path)
+    if not cleaned:
+        raise ValueError(explain_export_problem(cleaned))
+    path = os.path.abspath(cleaned)
+    if looks_like_export(path):
+        return path
+    raise ValueError(explain_export_problem(path))
+
+
+def slugify_name(name):
+    """Transforme un nom de dossier en morceau de chemin prévisible."""
+    text = unicodedata.normalize("NFKD", str(name or "export"))
+    text = text.encode("ascii", "ignore").decode("ascii")
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9]+", "-", text).strip("-")
+    return (text or "export")[:50].strip("-") or "export"
+
+
+def unique_path(base_path):
+    """Renvoie base_path, ou base_path_02/_03... si le dossier existe déjà."""
+    if not os.path.exists(base_path):
+        return base_path
+    idx = 2
+    while True:
+        candidate = f"{base_path}_{idx:02d}"
+        if not os.path.exists(candidate):
+            return candidate
+        idx += 1
+
+
+def make_default_output_dir(export_path):
+    """Crée le nom de sortie par défaut sans l'écrire sur disque."""
+    stamp = datetime.now().strftime("%Y-%m-%d_%H%M")
+    export_name = slugify_name(os.path.basename(os.path.normpath(export_path)))
+    return unique_path(os.path.join(REPORTS_DIR, f"discord_{stamp}_{export_name}"))
+
+
+def ask_yes_no(prompt, default=False):
+    suffix = "O/n" if default else "o/N"
+    while True:
+        answer = input(f"{prompt} [{suffix}] ").strip().lower()
+        if not answer:
+            return default
+        if answer in ("o", "oui", "y", "yes"):
+            return True
+        if answer in ("n", "non", "no"):
+            return False
+        log("Réponds par oui ou non.")
+
+
+def open_in_browser(html_path):
+    """Ouvre le rapport dans le navigateur par défaut."""
+    from pathlib import Path
+    import webbrowser
+    return webbrowser.open(Path(html_path).resolve().as_uri())
 
 
 MSG_INTROUVABLE = (
@@ -1115,9 +1209,7 @@ def build_payload(M, E, A, S, ADS):
     return payload
 
 
-def main():
-    global PKG, OUT_DIR, _GAME_CACHE_PATH
-
+def build_parser():
     parser = argparse.ArgumentParser(
         description="Analyse un export « Mes données » Discord et génère "
                     "un rapport HTML interactif.",
@@ -1127,36 +1219,28 @@ def main():
         nargs="?",
         default=None,
         help="Chemin vers le dossier d'export Discord décompressé. "
-             "Si omis, le script cherche automatiquement un dossier d'export "
-             "à côté de lui.",
+             "Si omis sans autre option, un menu interactif s'ouvre.",
     )
     parser.add_argument(
         "-o", "--output",
         dest="output",
-        default=OUT_DIR,
-        help="Dossier de sortie pour data.json / rapport.html "
-             "(défaut: ./rapport à côté du script).",
+        default=None,
+        help="Dossier de sortie exact pour data.json / rapport.html. "
+             "Si omis, un dossier daté est créé dans ./rapports/.",
     )
-    args = parser.parse_args()
+    return parser
 
-    # Résolution du dossier d'export
-    if args.export:
-        PKG = os.path.abspath(args.export)
-    else:
-        PKG = find_default_pkg()
 
-    if not PKG or not os.path.isdir(PKG):
-        log(MSG_INTROUVABLE)
-        if args.export:
-            log(f"(chemin fourni: {args.export})")
-        sys.exit(1)
+def run_analysis(export_path, output_dir):
+    global PKG, OUT_DIR, _GAME_CACHE_PATH
 
-    # Dossier de sortie
-    OUT_DIR = os.path.abspath(args.output)
+    PKG = validate_export_path(export_path)
+    OUT_DIR = os.path.abspath(output_dir)
     os.makedirs(OUT_DIR, exist_ok=True)
     _GAME_CACHE_PATH = os.path.join(OUT_DIR, "games_cache.json")
 
     log(f"Paquet analysé: {PKG}")
+    log(f"Dossier de sortie: {OUT_DIR}")
     M = analyze_messages(PKG)
     A = analyze_account(PKG)
     S = analyze_servers(PKG)
@@ -1177,7 +1261,104 @@ def main():
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(html_out)
     log(f">> rapport.html écrit -> {html_path}")
-    log("Terminé. Ouvre rapport/rapport.html dans ton navigateur.")
+    log("")
+    log("Terminé.")
+    log(f"Rapport HTML : {html_path}")
+    log(f"Données JSON  : {data_path}")
+    return data_path, html_path
+
+
+def print_menu():
+    log("")
+    log("=== Discord Wrapped - lanceur ===")
+    log("1. Analyser un export")
+    log("2. Détecter automatiquement un export")
+    log("3. Afficher l'aide")
+    log("4. Quitter")
+
+
+def confirm_and_run(export_path, output_dir):
+    log("")
+    log("Résumé avant génération")
+    log(f"  Export : {export_path}")
+    log(f"  Sortie : {output_dir}")
+    log("  Fichiers générés : data.json, rapport.html")
+    if not ask_yes_no("Lancer l'analyse ?", default=True):
+        log("Analyse annulée.")
+        return
+    _, html_path = run_analysis(export_path, output_dir)
+    if ask_yes_no("Ouvrir le rapport dans le navigateur ?", default=True):
+        if open_in_browser(html_path):
+            log("Ouverture demandée au navigateur.")
+        else:
+            log("Impossible d'ouvrir automatiquement le navigateur.")
+
+
+def interactive_main(parser):
+    while True:
+        print_menu()
+        choice = input("Choix > ").strip()
+
+        if choice == "1":
+            raw = input("Chemin du dossier d'export Discord > ")
+            cleaned = clean_user_path(raw)
+            try:
+                export_path = validate_export_path(cleaned)
+            except ValueError as exc:
+                log(f"Erreur : {exc}")
+                continue
+            output_dir = make_default_output_dir(export_path)
+            confirm_and_run(export_path, output_dir)
+            return
+
+        if choice == "2":
+            export_path = find_default_pkg()
+            if not export_path:
+                log(MSG_INTROUVABLE)
+                continue
+            output_dir = make_default_output_dir(export_path)
+            confirm_and_run(export_path, output_dir)
+            return
+
+        if choice == "3":
+            log("")
+            parser.print_help()
+            continue
+
+        if choice == "4":
+            log("À bientôt.")
+            return
+
+        log("Choix invalide. Entre 1, 2, 3 ou 4.")
+
+
+def main():
+    parser = build_parser()
+    if len(sys.argv) == 1:
+        interactive_main(parser)
+        return
+
+    args = parser.parse_args()
+
+    if args.export:
+        export_path = args.export
+    else:
+        export_path = find_default_pkg()
+
+    if not export_path:
+        log(MSG_INTROUVABLE)
+        sys.exit(1)
+
+    try:
+        export_path = validate_export_path(export_path)
+    except ValueError as exc:
+        log(f"ERREUR: {exc}")
+        if args.export:
+            log(f"(chemin fourni: {args.export})")
+        sys.exit(1)
+
+    output_dir = os.path.abspath(args.output) if args.output else make_default_output_dir(export_path)
+    run_analysis(export_path, output_dir)
 
 
 if __name__ == "__main__":

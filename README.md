@@ -42,22 +42,30 @@ you open in any browser.
 ## 🚀 Usage
 
 ```bash
-# Auto-detect an export folder next to the script:
+# Start the interactive launcher:
 python analyze.py
 
-# Or point to your export folder:
+# Direct mode: point to your export folder:
 python analyze.py "/path/to/your/discord/export"
 
-# Optional: choose the output directory (default: ./rapport)
+# Optional: choose the exact output directory
 python analyze.py "/path/to/export" -o ./my_report
+```
+
+Without `-o`, every analysis creates a predictable dated folder in `rapports/`,
+for example:
+
+```text
+rapports/discord_2026-06-10_0024_discord-data/
 ```
 
 This generates:
 
-- `rapport/data.json` — the computed statistics
-- `rapport/rapport.html` — the interactive dashboard
+- `data.json` — the computed statistics
+- `rapport.html` — the interactive dashboard
 
-Open `rapport/rapport.html` in your browser and enjoy. 🎉
+The script prints the full report path at the end and can offer to open it
+automatically from the interactive launcher. 🎉
 
 ### Re-rendering without re-analyzing
 
@@ -65,14 +73,18 @@ If you only tweaked the HTML template, regenerate the report from the existing
 `data.json` (instant):
 
 ```bash
+# Re-render the latest report found in ./rapports/
 python render.py
+
+# Or re-render a specific report
+python render.py "./rapports/discord_2026-06-10_0024_discord-data"
 ```
 
 ## 🔒 Privacy
 
 - Everything runs **locally**. Nothing is uploaded anywhere.
-- The generated `rapport/` folder contains **your personal data** and is
-  excluded from version control via `.gitignore`. **Never commit it.**
+- The generated `rapport/` and `rapports/` folders contain **your personal data** and are
+  excluded from version control via `.gitignore`. **Never commit them.**
 
 ## 📁 Project structure
 

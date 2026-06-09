@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Génère un rapport HTML autonome (dashboard interactif) à partir du payload."""
+import argparse
 import json
+import os
 
 
 def render_html(p):
@@ -880,19 +882,54 @@ applyLang(LANG);
 """.replace("__DATA__", data_json)
 
 
-def _regen():
-    """Régénère rapport/rapport.html à partir de rapport/data.json.
+def _find_latest_report_dir(here):
+    """Trouve le dernier rapport généré dans ./rapports/, puis l'ancien ./rapport/."""
+    reports_root = os.path.join(here, "rapports")
+    candidates = []
+    if os.path.isdir(reports_root):
+        for name in os.listdir(reports_root):
+            cand = os.path.join(reports_root, name)
+            data_path = os.path.join(cand, "data.json")
+            if os.path.isdir(cand) and os.path.exists(data_path):
+                candidates.append((os.path.getmtime(data_path), cand))
+    if candidates:
+        candidates.sort(reverse=True)
+        return candidates[0][1]
+
+    legacy = os.path.join(here, "rapport")
+    if os.path.exists(os.path.join(legacy, "data.json")):
+        return legacy
+    return None
+
+
+def _regen(argv=None):
+    """Régénère rapport.html à partir du data.json d'un dossier de rapport.
 
     Permet d'exécuter directement `python render.py` sans relancer
     l'analyse complète (utile après une modification du template).
     """
-    import os
+    parser = argparse.ArgumentParser(
+        description="Régénère rapport.html à partir d'un data.json existant.",
+    )
+    parser.add_argument(
+        "report_dir",
+        nargs="?",
+        default=None,
+        help="Dossier contenant data.json. Si omis, utilise le dernier rapport "
+             "dans ./rapports/, puis ./rapport/ en fallback.",
+    )
+    args = parser.parse_args(argv)
+
     here = os.path.dirname(os.path.abspath(__file__))
-    out_dir = os.path.join(here, "rapport")
+    out_dir = os.path.abspath(args.report_dir) if args.report_dir else _find_latest_report_dir(here)
+    if not out_dir:
+        print("data.json introuvable. Lance d'abord : python analyze.py")
+        raise SystemExit(1)
+
     data_path = os.path.join(out_dir, "data.json")
     html_path = os.path.join(out_dir, "rapport.html")
     if not os.path.exists(data_path):
-        print("data.json introuvable. Lance d'abord : python analyze.py")
+        print("data.json introuvable dans :", out_dir)
         raise SystemExit(1)
     with open(data_path, encoding="utf-8") as f:
         payload = json.load(f)

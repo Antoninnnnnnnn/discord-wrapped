@@ -44,22 +44,30 @@ simple fichier HTML que tu ouvres dans n'importe quel navigateur.
 ## 🚀 Utilisation
 
 ```bash
-# Détection automatique d'un dossier d'export à côté du script :
+# Lance le menu interactif :
 python analyze.py
 
-# Ou indique le chemin de ton export :
+# Mode direct : indique le chemin de ton export :
 python analyze.py "/chemin/vers/ton/export/discord"
 
-# Optionnel : choisir le dossier de sortie (défaut : ./rapport)
+# Optionnel : choisir le dossier de sortie exact
 python analyze.py "/chemin/vers/export" -o ./mon_rapport
+```
+
+Sans `-o`, chaque analyse crée automatiquement un dossier prévisible dans
+`rapports/`, par exemple :
+
+```text
+rapports/discord_2026-06-10_0024_mesdonneesdiscord/
 ```
 
 Cela génère :
 
-- `rapport/data.json` — les statistiques calculées
-- `rapport/rapport.html` — le tableau de bord interactif
+- `data.json` — les statistiques calculées
+- `rapport.html` — le tableau de bord interactif
 
-Ouvre `rapport/rapport.html` dans ton navigateur. 🎉
+Le script affiche le chemin complet du rapport à la fin et peut te proposer de
+l'ouvrir automatiquement depuis le menu interactif. 🎉
 
 ### Re-générer sans re-analyser
 
@@ -67,14 +75,18 @@ Si tu as seulement modifié le template HTML, régénère le rapport à partir d
 `data.json` existant (instantané) :
 
 ```bash
+# Régénère le dernier rapport trouvé dans ./rapports/
 python render.py
+
+# Ou régénère un rapport précis
+python render.py "./rapports/discord_2026-06-10_0024_mesdonneesdiscord"
 ```
 
 ## 🔒 Confidentialité
 
 - Tout s'exécute **en local**. Rien n'est envoyé nulle part.
-- Le dossier `rapport/` généré contient **tes données personnelles** et est
-  exclu du versionnage via `.gitignore`. **Ne le commite jamais.**
+- Les dossiers `rapport/` et `rapports/` générés contiennent **tes données personnelles** et sont
+  exclus du versionnage via `.gitignore`. **Ne les commite jamais.**
 
 ## 📁 Structure du projet
 
